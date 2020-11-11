@@ -61,7 +61,7 @@ class Reglette(private val bus: EventBus) : Container() {
             alignTopToTopOf(bgReglette)
             alignRightToLeftOf(bgReglette, cellSize)
             onClick {
-                bus.send(Validation)
+                if (errValid == 0) bus.send(Validation)
             }
         }.addTo(this)
         xchgBtn = roundRect(cellSize, cellSize, 5, color = RGBA(185, 174, 160))

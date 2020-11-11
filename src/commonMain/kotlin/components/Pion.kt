@@ -15,7 +15,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 data class Pion(private val bus: EventBus, val face: Int): Container() {
-    lateinit var laFace: Image
+    var laFace: Image
     init {
         val background = roundRect(cellSize, cellSize, 5.0, color = RGBA(185, 174, 160))
         laFace = image(facePion[face]) {
@@ -35,8 +35,7 @@ data class Pion(private val bus: EventBus, val face: Int): Container() {
                 y = start.y + info.dy
             } else if (info.end) {
                 val end = Point(start.x + info.dx + cellSize/2,start.y + info.dy + cellSize/2)
-
-                println("drag pion : face : $face / name : ${laFace.name} ${ start.toString() } > ${ end.toString() }")
+                println("drag pion : face : $face / name : ${laFace.name} $start > $end")
                 bus.send(PosePion(this@Pion, start, end))
             }
         }

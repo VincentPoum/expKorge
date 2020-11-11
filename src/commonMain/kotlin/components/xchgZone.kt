@@ -36,8 +36,8 @@ data class xchgZone(private val bus: EventBus, private val reglette: Reglette) :
                 size(cellSize * 0.6, cellSize * 0.6)
                 centerOn(this@roundRect)
             }
-            alignTopToTopOf(reglette.bgReglette)
-            alignLeftToRightOf(reglette.bgReglette, cellSize)
+            alignTopToTopOf(reglette.bgReglette, - 2 * cellSize)
+            alignRightToRightOf(reglette.bgReglette, cellSize)
             onClick {
                 annule()
             }
@@ -49,8 +49,8 @@ data class xchgZone(private val bus: EventBus, private val reglette: Reglette) :
                 centerOn(this@roundRect)
             }
             alpha(0.5)
-            alignTopToTopOf(reglette.bgReglette)
-            alignRightToLeftOf(reglette.bgReglette, cellSize)
+            alignTopToTopOf(reglette.bgReglette, - 2 * cellSize)
+            alignLeftToLeftOf(reglette.bgReglette, cellSize)
             onClick {
                 bus.send(Validation)
             }
@@ -71,21 +71,21 @@ data class xchgZone(private val bus: EventBus, private val reglette: Reglette) :
         val abs = ((lePoint.x - reglette.bgReglette.x - 2) / cellSize).toInt()
         val posx = reglette.bgReglette.x + 2 + (2 + cellSize) * abs
         val ord = ((lePoint.y - reglette.bgReglette.y - 2 * cellSize) / cellSize).toInt()
-        val posy = reglette.bgReglette.y + 2 + 2 * cellSize +(2 + cellSize) * ord
+        val posy = reglette.bgReglette.y + 2 + 2 * cellSize + (2 + cellSize) * ord
         val whereOk = (abs in 0..6 && ord == 0)
         return WherePion(whereOk, Pair(abs, ord), Point(posx, posy))
     }
 
     suspend fun fillZone() {
+        reglette.xchgBtn.visible = false
+        reglette.validBtn.visible = false
+        reglette.undoBtn.visible = false
+        reglette.shuffleBtn.visible = false
         reglette.content.forEachIndexed { index, pion ->
             if (pion.face == 26) {
                 pion.laFace.name = "{"
                 pion.laFace.image(facePion[26])
             }
-            reglette.xchgBtn.visible = false
-            reglette.validBtn.visible = false
-            reglette.undoBtn.visible = false
-            reglette.shuffleBtn.visible = false
             pion.moveTo(2 + reglette.bgReglette.x + (cellSize + 2) * index, reglette.bgReglette.y + 2 * cellSize, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
         }
     }
@@ -96,13 +96,14 @@ data class xchgZone(private val bus: EventBus, private val reglette: Reglette) :
                 pion.laFace.name = "{"
                 pion.laFace.image(facePion[26])
             }
-            reglette.xchgBtn.visible = true
-            reglette.validBtn.visible = true
-            reglette.undoBtn.visible = true
-            reglette.shuffleBtn.visible = true
-            pion.moveTo(2 + reglette.bgReglette.x + (cellSize + 2) * index, reglette.bgReglette.y , 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
+            pion.moveTo(2 + reglette.bgReglette.x + (cellSize + 2) * index, reglette.bgReglette.y + 2, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
         }
         this.hide(250.milliseconds)
         this.visible = false
+        reglette.xchgBtn.visible = true
+        reglette.validBtn.visible = true
+        reglette.undoBtn.visible = true
+        reglette.shuffleBtn.visible = true
+        bus.send(Annulation)
     }
 }

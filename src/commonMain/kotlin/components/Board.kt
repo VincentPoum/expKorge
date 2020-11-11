@@ -6,12 +6,18 @@ import com.soywiz.korim.color.Colors
 import com.soywiz.korma.geom.Point
 import com.soywiz.korma.geom.vector.roundRect
 import fieldSize
+import fontG
 import internals.*
 import leftIndent
 import topIndent
+import virtualResolution
 
 class Board(private val bus: EventBus) : Container() {
 
+    lateinit var scoreABg: RoundRect
+    lateinit var scoreATxt: Text
+    lateinit var scoreBBg: RoundRect
+    lateinit var scoreBTxt: Text
     lateinit var regBg: RoundRect
     lateinit var fieldBg: RoundRect
     lateinit var fieldTxt: Text
@@ -29,12 +35,26 @@ class Board(private val bus: EventBus) : Container() {
                 }
             }
         }
-        fieldBg = roundRect(5 * cellSize,5 * cellSize,5.0, color = Colors["#b9aea0"])
+        scoreABg = roundRect(5 * cellSize, 2 * cellSize, 5.0, color = Colors["#b9aea0"]){
+            position(leftIndent, cellSize)
+        }
+        scoreATxt = text("Score", textSize = 32.0, font = fontG, color = Colors["#123456"]){
+            centerOn(scoreABg)
+        }
+        scoreBBg = roundRect(5 * cellSize, 2 * cellSize, 5.0, color = Colors["#b9aea0"]){
+            position(virtualResolution.width - leftIndent - 5 * cellSize, cellSize)
+        }
+        scoreBTxt = text("Score", textSize = 32.0, font = fontG, color = Colors["#123456"]){
+            centerOn(scoreBBg)
+        }
+        fieldBg = roundRect(5 * cellSize,5 * cellSize,5.0, color = Colors["#555555"]){
+            position(leftIndent, virtualResolution.height - 5 * cellSize - 5)
+        }
         fieldTxt = text("") {
             textSize = 10.0
             filtering = false
         }.alignTopToTopOf(fieldBg)
-        regBg = roundRect(5 * cellSize,5 * cellSize,5.0, color = Colors["#b9aea0"]){
+        regBg = roundRect(7 * cellSize,3 * cellSize,5.0, color = Colors["#555555"]){
             alignLeftToRightOf(fieldBg, cellSize)
             centerYOn(fieldBg)
         }
@@ -57,6 +77,10 @@ class Board(private val bus: EventBus) : Container() {
         val posy = topIndent + 2 + (2 + cellSize) * laCase.first
         val whereOk = (laCase.first in 0..14 && laCase.second in 0..14)
         return WherePion(whereOk, laCase, Point(posx, posy))
+    }
+
+    fun placeLettre(){
+
     }
 
     fun majPlateau(majPlateau: MajPlateau) {

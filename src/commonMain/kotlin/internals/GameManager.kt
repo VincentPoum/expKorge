@@ -54,10 +54,11 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
 
     fun annulePlateau() {
         while (leTour.positions.count() > 0) {
-            val lig = leTour.positions.first().first
-            val col = leTour.positions.first().second
+            val lig = leTour.positions.first().first.first
+            val col = leTour.positions.first().first.second
+            val char = leTour.positions.first().second
             removeLettre(lig, col)
-            leTour.positions.remove(Pair(lig, col))
+            leTour.positions.remove(Pair(Pair(lig, col), char))
         }
         leTour.lettres = tirage
         log.info { "après annulation: ${leTour.lettres}" }
@@ -65,14 +66,16 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
     }
 
     suspend fun annule() {
-        annulePlateau()
-        reglette.content.forEachIndexed { index, pion ->
-            if (pion.face == 26) {
-                pion.laFace.name = "{"
-                pion.laFace.image(facePion[26])
+        if (!xchgFlag) {
+            annulePlateau()
+            reglette.content.forEachIndexed { index, pion ->
+                if (pion.face == 26) {
+                    pion.laFace.name = "{"
+                    pion.laFace.image(facePion[26])
+                }
+                pion.moveTo(2 + reglette.bgReglette.x + (cellSize + 2) * index, reglette.bgReglette.y + 2, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
             }
-            pion.moveTo(2 + reglette.bgReglette.x + (cellSize + 2) * index, reglette.bgReglette.y + 2, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
-        }
+        } else xchgFlag = false
     }
 
     suspend fun shuffle() {
@@ -161,9 +164,10 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
     }
 
     suspend fun regToBoard(boardEnd: WherePion, lePion: PosePion) {
-        leTour.positions.add(Pair(boardEnd.laCase.first, boardEnd.laCase.second))
-        val pos = leTour.lettres.indexOf((lePion.pion.face + 97).toChar().toString())
-        log.info { "pos de ${(lePion.pion.face + 97).toChar().toString()} ds leTour.lettres : $pos" }
+        val char = (lePion.pion.face + 97).toChar()
+        leTour.positions.add(Pair(Pair(boardEnd.laCase.first, boardEnd.laCase.second), char))
+        val pos = leTour.lettres.indexOf(char.toString())
+        log.info { "pos de $char ds leTour.lettres : $pos" }
         leTour.lettres = leTour.lettres.removeRange(pos..pos)
         lePion.pion.moveTo(boardEnd.coOrdAbs.x, boardEnd.coOrdAbs.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
         placeLettre((lePion.pion.laFace.name!!), boardEnd.laCase.first, boardEnd.laCase.second)
@@ -175,16 +179,18 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
     }
 
     suspend fun boardToBoard(boardStart: WherePion, boardEnd: WherePion, lePion: PosePion) {
+        val char = (lePion.pion.face + 97).toChar()
         removeLettre(boardStart.laCase.first, boardStart.laCase.second)
-        leTour.positions.remove(Pair(boardStart.laCase.first, boardStart.laCase.second))
+        leTour.positions.remove(Pair(Pair(boardStart.laCase.first, boardStart.laCase.second), char))
         lePion.pion.moveTo(boardEnd.coOrdAbs.x, boardEnd.coOrdAbs.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
-        leTour.positions.add(Pair(boardEnd.laCase.first, boardEnd.laCase.second))
+        leTour.positions.add(Pair(Pair(boardEnd.laCase.first, boardEnd.laCase.second), char))
         placeLettre((lePion.pion.laFace.name!!), boardEnd.laCase.first, boardEnd.laCase.second)
     }
 
     suspend fun boardToReg(boardStart: WherePion, regEnd: WherePion, lePion: PosePion) {
+        val char = (lePion.pion.face + 97).toChar()
         removeLettre(boardStart.laCase.first, boardStart.laCase.second)
-        leTour.positions.remove(Pair(boardStart.laCase.first, boardStart.laCase.second))
+        leTour.positions.remove(Pair(Pair(boardStart.laCase.first, boardStart.laCase.second), char))
         lePion.pion.moveTo(regEnd.coOrdAbs.x, regEnd.coOrdAbs.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
         leTour.lettres += (lePion.pion.face + 97).toChar().toString()
     }
@@ -202,9 +208,13 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
         val xchgEnd = xchgZone.onXchgZone(lePion.end)
         val boardStart = board.onBoard(lePion.start)
         val boardEnd = board.onBoard(lePion.end)
+        val oqpBoard =
+                if (boardEnd.laCase.first in 0..14 && boardEnd.laCase.second in 0..14)
+                    lignes[boardEnd.laCase.first].lettres[boardEnd.laCase.second] != ' '
+                else false
         when {
-            boardEnd.laCase in leTour.positions -> lePion.pion.moveTo(lePion.start.x, lePion.start.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
-            regStart.orgOk && boardEnd.orgOk -> {
+            oqpBoard -> lePion.pion.moveTo(lePion.start.x, lePion.start.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
+            !xchgFlag && regStart.orgOk && boardEnd.orgOk -> {
                 if (jokOuNon) bus.send(PoseJoker(lePion, boardEnd)) else regToBoard(boardEnd, lePion)
             }
             boardStart.orgOk && boardEnd.orgOk -> {
@@ -216,11 +226,14 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
                     lePion.pion.laFace.image(facePion[26])
                 }
                 boardToReg(boardStart, regEnd, lePion)
-
             }
             regStart.orgOk && regEnd.orgOk -> {
                 regToReg(regStart, regEnd, lePion)
             }
+            xchgStart.orgOk && regEnd.orgOk ->
+                lePion.pion.moveTo(regEnd.coOrdAbs.x, regEnd.coOrdAbs.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
+            xchgFlag && regStart.orgOk && xchgEnd.orgOk ->
+                lePion.pion.moveTo(xchgEnd.coOrdAbs.x, xchgEnd.coOrdAbs.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
             else -> lePion.pion.moveTo(lePion.start.x, lePion.start.y, 260.milliseconds, Easing.EASE_IN_OUT_QUAD)
         }
         println("après pose ${leTour.positions}")
@@ -234,6 +247,9 @@ class GameManager(private val bus: EventBus, private val board: Board, private v
     }
 
     fun dessinTour(): String {
-        return ("sens : ${leTour.sens} - lettres : ${leTour.lettres}}\n${leTour.positions}\n${leTour.mots}")
+        var retour = "sens : ${leTour.sens} - lettres : ${leTour.lettres}}\n"
+        leTour.positions.forEach { retour += "${it}\n" }
+        retour += "${leTour.mots}"
+        return retour
     }
 }
